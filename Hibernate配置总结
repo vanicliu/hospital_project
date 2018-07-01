@@ -1,0 +1,51 @@
+    Hibernate简介：
+        -什么是Hibernate？
+            -Hibernate是持久层（数据层）的一种ORM（object relation mapping-对象关系映射）框架；
+            -通过将数据库中的表与类映射，将表中字段与类中的成员变量进行映射，从而达到操作类就能操作数据库；
+            -Hibernate通过自身映射以及hql语言，可以达到不写sql语句的作用
+        -Hibernate的配置
+            -导入jar包
+                -将hibernate官网的jar包下载，将里面的required文件夹下的所有jar包导入到lib下面，将lib与项目进行关联；
+            -生成hibernate.cfg.xml核心配置文件(idea可自动生成下面三项)
+                -在idea中可以通过右击持久层生成持久层映射，选择相应的表,达到自动生成配置文件
+                -自己手写的话，主要是session-factory里的数据库连接属性，如driver，url，username，password等
+            -建立表对应的类，即类似一个javaBean，bean中的成员变量关联表中的字段，生成其getter，setter方法；
+            -生成该类与表映射的文件，文件名称为className.hbm.xml
+                -配置文件中包含<class>对应相应的类，name属性对应类名称，table属性对应表，schema属性对应数据库；
+                -接着是成员属性对应表中字段属性，name属性对应成员名称，column属性对应表中字段（列）;
+                    -成员下面还可以包括generator标签，class属性为native，即表示该成员对应的字段为主键；
+                -最后写操作数据接口类，接口实现类，在接口实现类中实现数据逻辑操作
+        -Hibernate的使用
+            -什么是session？
+                -session，数据层的持久化对象，可以理解为数据层的缓冲区，用来进行相应的数据操作
+                -在进行数据操作之前，首先就要获得session，可以将这一方法封装到工具类中
+            -获得session
+                -Configuration cfg=new Configuration();//获得hibernate核心配置
+                -SessionFactory sf=cfg.buildSessionFactory();/实例化SessionFactory对象，读取配置文件中的参数
+                -Session session=sf.openSession();//得到session，可进行相应的数据逻辑操作
+                -Transaction trans=session.beginTransaction();//得到事务
+            -执行增删改查
+                -增
+                    -session.save(表对应的类的实例);
+                -删
+                    -一般基于id删除，需要先拿到该类所代表的Object对象
+                    -Object obj=session.get(类.class,id);
+                    -session.delete(obj);删除
+                -改
+                    -session.update(表对应的类的实例)；
+                -查
+                    -查找单条数据
+                        -直接将删里面的obj返回
+                    -查找多条数据
+                        -Query q=session.createQuery(hql:"from 类名");hql语句，表示从该类里通过映射拿数据
+                        -List list=q.list();//拿到多条数据
+            -提交事务
+                -trans.commit();
+                -trans.rollback();//若有需要，执行事务回滚;
+            -关闭数据库连接
+                -session.close();
+        -初次配置时遇到的问题
+            -url未写完整，需要添加时区，即?serverTimeZone=GMT;
+            -hibernate5.2.Final的jar包与jdk9不兼容的问题，解决如下：
+                -使用低版本的jdk6/7/8进行替换（未使用）
+                -再导入4个jaxb的jar包（使用，不兼容的根源所在）

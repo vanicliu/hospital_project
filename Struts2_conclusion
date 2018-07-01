@@ -1,0 +1,35 @@
+含泪回忆部分内容：
+    -动态代理
+        -为什么要有动态代理？
+            -可以将一些重复性的与程序耦合性较低的内容放在代理类中，这样无需每次使用都要写一遍；
+        -如何实现动态代理？
+            -1、写一个动态代理类，实现InvocationHandler接口，覆盖其中的invoke()方法；
+            -2、声明被代理对象，写一个bind方法绑定被代理对象，该方法返回被代理对象的一个实例
+                -bind(Object deleget){
+                    初始化被代理对象；
+                    return Proxy.newProxyInstance(loader,interfaces,h);
+                        -loader:被代理对象的类加载器；
+                        -interfaces：被代理对象的所有接口
+                        -h：被代理对象自己；
+                    }
+            -3、覆盖invoke（）方法
+                -invoke(Object proxy,Method method,Object[] args)
+                    -proxy:被代理对象
+                    -method：被代理对象中的方法
+                    -args[]：被代理对象中的参数
+                -实现代理内容
+                    -Object obj=method.invoke(deleget,args);//调用被代理的方法
+            -4、调用动态代理
+                -UserDao dao=(UserDao)new ProxyHandler.bind(new UserDaoImpl)；//实例化被代理对象
+                -dao.delete();//调用被代理对象中的方法
+    -Struts2自定义拦截器
+        -拦截器的原理：
+            -通过反射机制获取action，从而可以为所欲为！
+        -如何定义？
+            -写一个拦截器类，继承AbstractInterceptor的抽象方法，覆盖其中的interceptor()方法；
+            -该方法内的参数ActionInterceptor ai，通过ai.getAction()可以用来获取目标action；
+            -实现拦截内容，返回相应的返回值（与配置action中的result对应）
+        -拦截器的配置
+            -在Struts.xml文件中的package下配置，首先配置interceptors，声明其name，class；
+            -在要拦截的action里配置<interceptor-ref>,声明其name与上述name对应；
+                -先要配置默认的拦截器引用，name=defaultStack；

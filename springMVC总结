@@ -1,0 +1,316 @@
+spring MVC总结
+    -用maven搭建springMVC的项目
+        -创建一个在webapp下新的maven工程
+        -在pom文件中添加所需的依赖项
+        -给项目提供spring和springMVC的框架支持，生成springMVC的核心配置文件
+            -如果没有spring选项，可以先将module中的spring先删掉，再添加支持
+    -搭建springMVC环境
+        -在web.xml文件中添加中央处理器dispatcherServlet
+            -<servlet>
+                 <servlet-name>springMVC</servlet-name>
+                 <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+                 <init-param>
+                     <!--配置dispatcher-servlet.xml作为mvc的配置文件-->
+                     <param-name>contextConfigLocation</param-name>
+                     <param-value>/WEB-INF/dispatcher-servlet.xml</param-value>
+                 </init-param>
+                 <!--加载顺序的优先级-->
+                 <load-on-startup>1</load-on-startup>
+                 <async-supported>true</async-supported>
+            </servlet>
+            <servlet-mapping>
+                <servlet-name>springMVC</servlet-name>
+                <url-pattern>/</url-pattern>
+            </servlet-mapping>
+        -在dispatcher-servlet.xml中配置视图管理器
+            - <bean id="defaultViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+                 <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+                 <property name="prefix" value="/WEB-INF/views/"/><!--设置JSP文件的目录位置-->
+                 <property name="suffix" value=".jsp"/>
+                 <property name="exposeContextBeansAsAttributes" value="true"/>
+            </bean>
+        -配置自动扫包和注解驱动
+            -<context:component-scan base-package="example.controller"/>
+            -<!--启用spring的一些annotation -->
+            -<context:annotation-config/>
+            <!-- 配置注解驱动 可以将request参数与绑定到controller参数上 -->
+            -<mvc:annotation-driven/>
+        -配置静态资源映射
+            -<!--静态资源映射-->
+             <!--本项目把静态资源放在了webapp的statics目录下，资源映射如下-->
+             <mvc:resources mapping="/css/**" location="/WEB-INF/statics/css/"/>
+             <mvc:resources mapping="/js/**" location="/WEB-INF/statics/js/"/>
+             <mvc:resources mapping="/image/**" location="/WEB-INF/statics/image/"/>
+        -applicationContext.xml配置文件是用来配置一些非MVC的配置，暂时用不到
+            -<context:component-scan base-package="example"/>
+    -springMVC的工作流程
+        -浏览器请求-->中央处理器DispatcherServlet-->servlet寻找handlerMapping-->找到controller
+         -->找到对应处理的业务层service-->返回结果modelAndView-->回到中央处理器-->通过视图解析寻找返回的页面
+         -->数据填充完成渲染-->返回到浏览器
+    -springMVC的几个重要接口
+        -DispatcherServlet（整个springMVC的核心）
+            -spring提供的前端控制器，所有的请求都由他统一分发。在DispatcherServlet将请求分发给spring controller之前，
+             需要通过HandlerMapping来定位到具体是哪个controller
+        -HandlerMapping
+            -完成客户请求到controller的映射
+        -Controller
+            -调用service层完成用户请求，并返回ModelAndView对象给中央处理器DispatcherServlet
+            -从宏观角度讲，DispatcherServlet是整个web应用的控制器
+             从微观角度讲，Controller是单个http请求的控制器
+    -springMVC中的注解
+        -@ReqeustMapping注解
+            -可以通过注解内的属性让请求更加精确
+                -value
+                    -表示请求的url，可以是一个单值，也可以是一个数组表示多个url请求同通过该方法来处理
+                    -@RequestMapping(value="");
+                    -@RequestMapping(value={"...","..."})
+                -method
+                    -表示请求的方式，可以是get，post，put...等
+                    -@RequestMapping(value="",method="RequestMethod.POST/GET/PUT...");
+                -params
+                    -表示请求的url里面的参数信息
+                    -@RequestMapping(value="",method="RequestMethod.POST/GET/PUT...",
+                                     params={"username","pass!=123456"});
+                -headers
+                    -表示该次请求的请求头
+                    -@RequestMapping(value={"...","..."},headers={"","",""...})
+        -@RequestParam(value="",required=true/false,defaultValue="")在方法入参前注解可获得传递参数
+            -属性value：表示请求参数名
+            -属性required：表示该参数是否必须，默认为true，没有会有异常
+            -属性defaultValue：表示该参数的默认值
+            -如果只有@RequestParam表示默认参数名为方法入参名且该参数必须存在且没有默认值
+        -@RequestHeader(value="")
+            -使用该注解可以拿到请求头信息
+            -属性value表示请求头的名称
+        -@CookieValue("")
+            -使用该注解可以拿到cookie中的信息
+            -属性value表示cookie中某一项的名称
+    -springMVC传递页面参数
+        -入参是pojo（通过表单传值）post
+            -页面的参数与pojo里面的成员变量一一对应时，即可将页面上的参数自动变成一个pojo
+            -controller
+                -@RequestMapping("/testPojo")
+                 public String testPojo(Student student){
+                     System.out.println("testPojo:"+student);
+                     return "success";
+                 }
+            -注意：不能使用RequestParam("")传递对象参数，只能传递基本类型的参数
+        -入参是pojo（通过超链接传值）get
+            -超链接url中的参数须与成员变量一一对应
+            -注意：不能使用RequestParam("")传递对象参数，只能传递基本类型的参数
+        -入参是servletAPI
+            -直接在方法中调用servletAPI的变量，如request，response...
+        -使用ModelAndView模型视图类将数据传到页面
+            -用ModelAndView作为控制器方法返回类型
+            -实例化ModelAndView，参数为数据所要传递的页面
+            -使用addObject(key,value)将数值放入request范围里
+            -在页面可以使用el表达式取值
+            -返回的模型视图的实例化对象
+        -使用java.util.map存储数据并传给页面
+            -方法返回值类型依旧为视图层字符串，代表要跳转到哪个页面
+            -通过map.put(key,value)存放数据
+            -Controller会将该map自动转换成ModelMap，便于在jsp页面直接调取数据
+        -使用Model存储数据并传给页面
+            -可以在方法入参实例化一个Model类
+            -通过model.addAttribute(key,value)存储数据
+            -方法返回值类型依旧为视图层字符串，代表要跳转到哪个页面
+        -使用ModelMap存储数据并传给页面
+            -可以在方法入参实例化一个ModeMap类
+            -通过modelMap.addAttribute(key,value)存储数据
+            -方法返回值类型依旧为视图层字符串，代表要跳转到哪个页面
+        -@ModelAttribute(request范围内的数据共享)
+            -注解在入参前
+                -使用该注解方法controller方法入参前，可将前台页面传过来的数据自动放入ModelMap中
+                 在入参重定义一个map即可获取到数据
+            -注解在方法上
+                -将该注解注解在方法上时，会先执行该方法，其传递过来的数据信息会进行request内共享
+                 在任何controller的方法返回的页面上都可使用
+                    -该方法分为有无返回值
+                        -有返回值：直接将该返回值作为key来取值
+                        -无返回值，则需自己构建一个map作为入参，来放入map，用map的key来取值
+                -若有多个拥有该注解的方法同时执行，则会根据先后顺序，将最后执行方法的数据放入request中
+        -@SessionAttribute(session范围内的数据共享)
+            -开启共享
+                -在Controller类上使用注解@SessionAttribute，该注解有属性value和type
+                    -value：表示key为该值的数据，eg：@SessionAttribute(value="student")
+                    -type:表示数据类型为某种类型的数据，eg：@SessionAttribute(type=String.class)
+            -设置共享
+                -在该类的方法里，被放入map的数据就会在session范围内共享
+            -关闭共享
+                -在某个方法的入参传入SessionStatus类的参数
+                 设置sessionStatus.setComplete();
+                 调用该方法即可清楚session信息
+        -转发与重定向
+            -转发页面
+                -在controller的方法的返回值为"forward:/index.jsp"
+                -可以传值
+            -转发url
+                -在controller的方法的返回值为"forward:/test/index"
+                -可以传值
+            -重定向页面
+                -在controller的方法的返回值为"redirect:/index.jsp"
+                -不可以传值
+            -重定向url
+                -在controller的方法的返回值为"redirect:/test/index"
+                -不可以传值
+    -springMVC的RESTful风格
+        -传递参数
+            -RESTful风格
+                -以往传递参数都是类似index.jsp?id=1&age=10之类的，RESTful则是
+                 index.jsp/12,则代表id=12，controller使用@PathVariable("id")来接收参数
+                -@RequestMapping写法
+                    -@RequestMapping("/testParam/{id}")
+                     public String testParam(@PathVariable("id") Integer id){
+                         System.out.println("testParam："+id);
+                         return "successRESTful";
+                     }
+        -增删改查
+            -POST-->增
+                -前端
+                    -<form action="testRESTful/testPost" method="post">
+                         <input type="submit" value="增">
+                     </form>
+                -controller
+                    - @RequestMapping(value = "/testPost",method = RequestMethod.POST)
+                     public String testPost(){
+                         System.out.println("testPost");
+                         return "success";
+                     }
+            -GET-->查
+                -前端
+                    <form action="testRESTful/testGet/1" method="get">
+                        <input type="submit" value="查">
+                    </form>
+                -控制器
+                    -@RequestMapping(value = "/testGet/{id}",method = RequestMethod.GET)
+                     public String testGet(@PathVariable Integer id){
+                         System.out.println("testGet: "+id);
+                         return "success";
+                     }
+            -PUT-->改
+            -DELETE-->删
+                -注意:
+                    -需要在web.xml中配置过滤器，将post请求能够转化为相应的put或delete请求
+                    -在form表单中需要添加一个隐藏域，name="_method",才能够转化请求
+                    -在controller中添加ResponseBody()注解，并将返回值不能设置为success
+                     因为会被映射成success.jsp,而spring会认为这是一个jsp接口，只支持get，post和head
+                     所以才会有405的状态码出现
+        -@RequestMapping还支持Ant风格的url
+            -?表示匹配一个字符
+                -@RequestMapping("/?bcd")=@RequestMapping("/abcd")/@RequestMapping("/bbcd")等
+            -*表示匹配所有字符
+                -@RequestMapping("/*/abc)=@RequestMapping("/abc/abc)/@RequestMapping("/abcd/abc)等
+            -**表示匹配很多层路径
+                -@RequestMapping("/**/abc)=@RequestMapping("/abc/cde/abc)/@RequestMapping("/abc/de/ef/g/abc)等
+    -@ResponseBody
+        -@responseBody注解的作用是将controller的方法返回的对象通过适当的转换器转换为指定的格式之后，
+         写入到response对象的body区，通常用来返回JSON数据或者是XML数据。
+         需要注意的呢，在使用此注解之后不会再走视图处理器，而是直接将数据写入到输入流中，
+         他的效果等同于通过response对象输出指定格式的数据。
+        -返回可以是单个对象，也可以是多个对象组成的数组，数据的格式默认为json，前台无需解析(需要导入jackson的jar包)。
+    -springMVC文件上传与下载
+        -文件上传
+            -使用MultipartFile，首先需要配置
+                -在springMVC的核心配置文件中配置上传文件位置的静态资源
+                    -<mvc:resources mapping="/upload/**" location="/upload/"/>
+                    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+                        <property name="defaultEncoding" value="UTF-8"/>
+                        <property name="maxUploadSize" value="10240000"/>
+                    </bean>
+            -前端页面
+                -在页面form域里面设置method="post" enctype="multipart/form-data"
+            -controller代码
+                -将页面的file域以入参传递，用@RequestParam 修饰MultipartFile的实例file
+                -拿到文件的名称，地址
+                    -String name=file.getOriginalFilename();
+                    -String path=request.getSession().getServletContext().getRealPath("/")+"upload/"+name;
+                -用名称地址封装到Path的实例uploadFile
+                    -Path path=new Path(path,name);
+                -将该文件上传
+                    -file.transferTo(uploadFile);
+        -文件下载
+            -使用HttpServletRequest和HttpServletResponse
+                -前端
+                    -以超链接的形式来发送下载请求，将文件名放入链接中
+                -Controller
+                    -入参中包含@RequestParam文件名和request,response参数
+                    -先拿到文件所在的路径，并放入buffer缓存区，以输入流的形式读入
+                    -设置页面下载响应，再通过输出流读取即可
+                    -完整代码
+                        -String realPath=request.getSession().getServletContext().getRealPath("/");
+                         File file=new File(realPath+"/upload/"+filename);
+                         String fileNames=file.getName();
+                         try {
+                             InputStream inputStream=new BufferedInputStream(new FileInputStream(file));
+                             byte[] buffer=new byte[inputStream.available()];
+                             inputStream.read(buffer);
+                             inputStream.close();
+                             response.reset();
+                             response.addHeader("Content-Disposition","attachment;filename="+
+                                            new String(fileNames.replaceAll(" ","").getBytes("UTF-8"),
+                                                 "iso8859-1"));
+                             response.addHeader("Content-Length",""+file.length());
+                             OutputStream os=new BufferedOutputStream(response.getOutputStream());
+                             response.setContentType("application/octet-stream");
+                             os.write(buffer);
+                             os.flush();
+                             os.close();
+                         } catch (Exception e) {
+                             e.printStackTrace();
+                         }
+        -遇到的坑
+            -idea的文件上传输出到target文件夹下！！
+            -文件下载时注意文件的来源，有的文件不可被操作！
+    -springMVC的数据格式化
+        -数字
+            -使用注解@NumberFormat(style=Style.CURRENCY)//自带的
+                    @NumberFormat(pattern="#,###.##")//自定义
+        -时间
+            -使用注解@DateTimeFormat(iso=ios.DATE)//自带的
+                    @DateTimeFormat(pattern="yy-MM-dd HH:mm:ss")//自定义
+        -直接在页面显示，需要配合spring MVC的标签，不好。
+    -自定义验证
+        -使用hibernate的validator的jar包来进行验证
+    -springMVC拦截器(与spring中的AOP类似)
+        -实现拦截器
+            -实现HandlerInterceptor接口或者继承HandlerInterceptorAdaptor类来实现拦截器
+                -实现接口则会自动实现三个方法，而继承类则可以自己写方法，不会一定要实现三个接口。
+        -拦截器中有三个方法
+                -boolean preHandler()：在业务完成之前进行拦截,返回值为false，则不会往下执行业务和其他方法
+                -void postHandler():在业务完成之后，但是dispatcherServlet向客户端发出响应之前进行拦截
+                -void afterCompletion():在dispatcherServlet相应之后拦截，进行一些资源清理的操作
+        -拦截器的配置
+            -在springMVC的核心配置文件中配置拦截器
+                -全局拦截器
+                    -<mvc:interceptors>
+                         <!--全局拦截器-->
+                         <bean class="example.interceptor.TestInterceptor"/>
+                     </mvc:interceptors>
+                -局部拦截器
+                    -局部拦截符合条件的所有请求
+                        -<mvc:interceptor>
+                             <mvc:mapping path="/testRESTful/**"/>//请求的url路径
+                             <bean class="example.interceptor.TestInterceptor2"/>
+                         </mvc:interceptor>
+                    -局部拦截所有请求除某些请求之外
+                        -<mvc:interceptor>
+                             <mvc:mapping path="/**"/>
+                             <mvc:exclude-mapping path="/testRESTful/**"/>
+                             <bean class="example.interceptor.TestInterceptor2"/>
+                         </mvc:interceptor>
+        -拦截器的工作顺序
+            -当有多个拦截器同时工作时，需要遵循先进后出的思想，假设现在有三个拦截器同时拦截某一请求，那么执行顺序为：
+             拦截器1的preHandle-->拦截器2的preHandle-->拦截器3的preHandle-->业务层工作
+             -->拦截器3的postHandle-->拦截器2的postHandle-->拦截器1的postHandle
+             -->拦截器3的afterCompletion-->拦截器2的afterCompletion-->拦截器1的afterCompletion-->
+    springMVC的异常处理
+        -使用@ExceptionHandler(异常类型.class)注解来捕获异常
+        -配合ModelAndView来返回错误试图
+        -@ExceptionHandler(RuntimeException.class)
+         public ModelAndView catchException(Exception e){
+             ModelAndView modelAndView =new ModelAndView("error");
+             System.out.println("catch: "+e);
+             modelAndView.setViewName("error");
+             modelAndView.addObject("exception",e);
+             return  modelAndView;
+         }

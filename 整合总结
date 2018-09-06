@@ -1,0 +1,267 @@
+ssm整合总结
+    -spring与mybatis整合过程
+        -在webapp下新建一个maven工程并完善文件夹
+            -在main下面的java和resources文件夹里的文件就是classpath下的文件
+            -将java文件夹标记为源文件夹，resources文件夹标记为资源文件夹
+            -在java文件夹下新建项目文件，resources文件夹下放置项目的配置资源
+            -在src主目录下新建test测试文件夹，在里面新建java源文件夹和resources资源文件夹
+        -添加项目依赖（主要分为五大块）
+            -测试所需的Junit4的依赖
+                -<dependency>
+                  <groupId>junit</groupId>
+                  <artifactId>junit</artifactId>
+                  <version>4.12</version>
+                  <scope>test</scope>
+                 </dependency>
+            -日志相关依赖
+                -sl4j与logback依赖
+                    -<dependency>
+                       <groupId>org.slf4j</groupId>
+                       <artifactId>slf4j-api</artifactId>
+                       <version>1.7.12</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>ch.qos.logback</groupId>
+                       <artifactId>logback-core</artifactId>
+                       <version>1.1.11</version>
+                     </dependency>
+                     <!--实现sl4j并整合-->
+                     <dependency>
+                       <groupId>ch.qos.logback</groupId>
+                       <artifactId>logback-classic</artifactId>
+                       <version>1.1.11</version>
+                     </dependency>
+            -数据库相关依赖
+                -mysql，c3p0连接池相关依赖
+                    -<dependency>
+                       <groupId>mysql</groupId>
+                       <artifactId>mysql-connector-java</artifactId>
+                       <version>8.0.11</version>
+                         <scope>runtime</scope>
+                     </dependency>
+                   <!-- https://mvnrepository.com/artifact/com.mchange/c3p0 -->
+                   <dependency>
+                       <groupId>com.mchange</groupId>
+                       <artifactId>c3p0</artifactId>
+                       <version>0.9.5.2</version>
+                   </dependency>
+            -DAO层相关依赖
+                -mybatis相关依赖
+                    -<dependency>
+                       <groupId>org.mybatis</groupId>
+                       <artifactId>mybatis</artifactId>
+                       <version>3.4.5</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>org.mybatis</groupId>
+                       <artifactId>mybatis-spring</artifactId>
+                       <version>1.3.1</version>
+                     </dependency>
+            -web层相关依赖
+                -servletAPI，标签库，jstl标签，jackson相关依赖
+                    -<dependency>
+                       <groupId>taglibs</groupId>
+                       <artifactId>standard</artifactId>
+                       <version>1.1.2</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>jstl</groupId>
+                       <artifactId>jstl</artifactId>
+                       <version>1.2</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>com.fasterxml.jackson.core</groupId>
+                       <artifactId>jackson-databind</artifactId>
+                       <version>2.9.5</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>javax.servlet</groupId>
+                       <artifactId>javax.servlet-api</artifactId>
+                       <version>3.1.0</version>
+                     </dependency>
+            -spring相关依赖
+                -spring核心依赖（core,context,beans）
+                    -<dependency>
+                       <groupId>org.springframework</groupId>
+                       <artifactId>spring-core</artifactId>
+                       <version>4.3.14.RELEASE</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>org.springframework</groupId>
+                       <artifactId>spring-beans</artifactId>
+                       <version>4.3.14.RELEASE</version>
+                     </dependency>
+                     <dependency>
+                       <groupId>org.springframework</groupId>
+                       <artifactId>spring-context</artifactId>
+                       <version>4.3.14.RELEASE</version>
+                     </dependency>
+                -spring的dao层相关依赖
+                    -spring-jdbc，spring的事务
+                        -<dependency>
+                           <groupId>org.springframework</groupId>
+                           <artifactId>spring-jdbc</artifactId>
+                             <version>4.3.14.RELEASE</version>
+                         </dependency>
+                         <dependency>
+                           <groupId>org.springframework</groupId>
+                           <artifactId>spring-tx</artifactId>
+                           <version>4.3.14.RELEASE</version>
+                         </dependency>
+                -springWEB层相关依赖
+                    -springMVC，spring-web
+                        -<dependency>
+                           <groupId>org.springframework</groupId>
+                           <artifactId>spring-web</artifactId>
+                           <version>4.3.14.RELEASE</version>
+                         </dependency>
+                         <dependency>
+                           <groupId>org.springframework</groupId>
+                           <artifactId>spring-webmvc</artifactId>
+                           <version>4.3.14.RELEASE</version>
+                         </dependency>
+                -spring-test相关依赖
+                    -spring-test
+                        -<dependency>
+                           <groupId>org.springframework</groupId>
+                           <artifactId>spring-test</artifactId>
+                           <version>4.3.14.RELEASE</version>
+                         </dependency>
+        -设计表与表结构，并创建对应表结构的实体类（注意映射关系）（项目工程目录下）
+        -构建mybatis
+            -创建mybatis核心配置文件mybatis-config.xml（resources路径下）
+                -这里只配置简单的mybatis的全局配置，其余dao接口及其映射交给spring容器管理
+                -<settings>
+                     <!--使用jdbc的getGeneratedKeys，获得数据库自增主键-->
+                     <setting name="useGeneratedKeys" value="true"/>
+                     <!--使用列别名替换列名-->
+                     <setting name="useColumnLabel" value="true"/>
+                     <!--使用驼峰命名转换 Table(seckill_id)->Entity(seckillId)-->
+                     <setting name="mapUnderscoreToCamelCase" value="true"/>
+                     <!--将mybatis的sql语句打印到控制台-->
+                     <setting name="logImpl" value="STDOUT_LOGGING" />
+                 </settings>
+            -创建接口实现类mapper(resources路径下)
+        -整合spring和mybatis
+            -创建数据库连接属性文件jdbc.properties（main路径下）
+            -创建spring配置文件spring-dao.xml（resources/spring目录下）
+            -读取数据库属性文件
+                -<context:property-placeholder location="classpath:jdbc.properties"/>
+            -配置数据库连接池c3p0（基本属性与私有属性）
+                -<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+                     <!--数据库连接的基本属性-->
+                     <property name="driverClass" value="${jdbc.driver}"/>
+                     <property name="jdbcUrl" value="${jdbc.url}"/>
+                     <property name="user" value="${jdbc.username}"/>
+                     <property name="password" value="${jdbc.password}"/>
+                     <!--c3p0连接池的私有属性-->
+                     <!--连接池最大连接数-->
+                     <property name="maxPoolSize" value="30"/>
+                     <!--连接池最小连接数-->
+                     <property name="minPoolSize" value="10"/>
+                     <!--关闭连接后不自动commit-->
+                     <property name="autoCommitOnClose" value="false"/>
+                     <!--获取连接超时时间-->
+                     <property name="checkoutTimeout" value="1000"/>
+                     <!--连接不上时重试次数-->
+                     <property name="acquireRetryAttempts" value="2"/>
+                 </bean>
+            -配置mybatis的sqlSessionFactory
+                -注入连接池
+                -扫描mybatis全局配置文件
+                -扫描entity类，使用Aliases别名
+                -扫描sql配置文件，mapper/*.xml，
+                -<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+                     <!--注入数据库连接池-->
+                     <property name="dataSource" ref="dataSource"/>
+                     <!--配置mybatis全局文件-->
+                     <property name="configLocation" value="classpath:mybatis-config.xml"/>
+                     <!--，扫描entity包，配置Alias别名-->
+                     <property name="typeAliasesPackage" value="seckill.entity"/>
+                     <!--扫描sql配置文件：mapper下面的xml文件-->
+                     <property name="mapperLocations" value="classpath:mapper/*.xml"/>
+                 </bean>
+            -配置扫描dao层接口，动态实现接口
+                -注入sqlSessionFactory
+                -扫描dao层的包文件
+                -<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+                     <!--注入sqlSessionFactoryBean-->
+                     <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+                     <!--需要扫描的dao接口包-->
+                     <property name="basePackage" value="seckill.dao"/>
+                 </bean>
+    -spring与业务层的整合
+        -将service层的所有文件放入springIOC中管理，spring会根据注解自动识别service类里的一些依赖注入
+            -<context:component-scan base-package="seckill.service"/>
+        -配置业务层中的事务管理器（采用spring jdbc中的事务管理器），注入数据源，并告知该事务管理器由注解驱动
+            -<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+                <property name="datasource" ref="dataSource"/>
+             </bean>
+             <tx:annotation-driven transaction-manager="transactionManager"/>
+        -在业务方法上使用@Transactional标记该方法使用事务管理
+    -springMVC的相关配置
+        -在web.xml中配置中央处理器DispatcherServlet
+            -初始化参数找到springMVC配置文件的位置
+            -选择该中央处理器的映射范围
+                -<servlet>
+                     <servlet-name>seckill-dispatcher</servlet-name>
+                     <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+                     <!--配置springMVC需要加载的配置文件-->
+                     <init-param>
+                         <param-name>contextConfigLocation</param-name>
+                         <param-value>classpath:spring/spring-*.xml</param-value>
+                     </init-param>
+                 </servlet>
+                 <servlet-mapping>
+                     <servlet-name>seckill-dispatcher</servlet-name>
+                     <url-pattern>/</url-pattern>
+                 </servlet-mapping>
+        -在spring目录下配置springMVC的配置文件
+            -主要有以下方面
+                -打开注解驱动，实现一系列配置
+                    -<mvc:annotation-driven/>
+                -配置静态资源映射
+                    -<mvc:default-servlet-handler/>
+                -配置视图处理器
+                    -<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+                         <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+                         <property name="prefix" value="/WEB-INF/jsp/"/>
+                         <property name="suffix" value=".jsp"/>
+                     </bean>
+                -扫描controller的包文件，放入springIOC中托管
+                    -<context:component-scan base-package="seckill.web"/>
+        -前端主要由bootstrap和js（jquery）构成
+    -整个工程的文件夹目录
+        -src
+            -main
+                -java//类路径下，放置项目java代码相关
+                    -项目名称
+                        -dao//放置接口文件
+                        -dto//传输到web层的数据封装
+                        -service//业务逻辑层相关
+                            -service接口
+                            -service接口实现
+                        -entity//数据库中表所对应的实体类
+                        -exception//业务层中出现的异常封装
+                        -enums//业务层中出现的枚举
+                        -web//放置controller
+                -resources//类路径下，放置资源文件相关
+                    -mappers//dao层接口的实现，xml实现
+                    -spring//spring配置所需文件，包括dao，service，web层
+                    -jdbc.properties//jdbc资源文件
+                    -mybatis-config.xml//mybatis核心配置文件
+                    -...//其他一些需要放置在类路径下的资源文件
+                -sql//一些ddl文件
+                -webapp
+                    -static//放置静态资源文件，如js/css等
+                    -WEB-INF//该路径下的文件不可直接访问
+                        -pages//放置前端页面文件
+                        -web.xml//web层的核心配置文件
+                    -index.jsp//一些无需保护的页面，如首页，可直接通过url访问
+            test//测试文件
+                -java//测试所需代码
+                -resources//测试所需资源文件
+                -junit与spring的整合
+                    -@RunWith(SpringJunitClassRunner.Class)
+                    -@CotextConfiguration("classpath:spring/...xml")
+    -遵循Restful的url设计规范

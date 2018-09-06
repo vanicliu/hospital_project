@@ -1,0 +1,42 @@
+总结以及遇到的问题
+    -配置的问题
+        -这一次的配置问题主要出现在
+            -mybatis的核心配置名称不熟悉，拼写错误
+            -在service层的代码上忘记添加注解@Service，导致spring托管失败
+    -前后台json的交互的问题
+        -将一个表单参数序列化为json对象
+            -var formData=$("#form).serializeArray();
+             var formObject={};
+             for(var item in formData){
+                formObject[formData[item].name]=formData[item].value;
+             }
+             var formJson=JSON.stringify(formObject);
+        -ajax传输json对象时需要添加的属性
+            -dataType:"json",
+             contentType:"application/json;charset=utf-8",
+        -Controller接收json
+            -在入参上添加注解@RequestBody,json对象将自动添加到入参的po上
+            -通过@ResponseBody注解在方法上，将自动返回json对象
+            -@RequestMapping添加属性consumes="application/json"
+        -Controller返回script语句
+            -方法返回值类型为String,通过<script></script>标签引用
+            -在RequestMapping的produces属性中设置"text/html"
+        -Controller返回页面
+            -当执行完需要返回到别的页面时，需要使用重定向，才会使页面上的js代码有效，请求转发则不行
+            -return "redirect:/history/show";
+    -mybatis的操作的问题
+        -动态sql的拼接
+        -在动态sql中的<if>，非字符串型数据不能执行属性名称！=''的操作，否则会报错
+    -bootstrap的使用
+        -通过cdn引一些bootstrap的样式与js
+    -lombok的使用
+        -在idea里下载插件
+        -在pom里面导入依赖
+            -<dependency>
+               <groupId>org.projectlombok</groupId>
+               <artifactId>lombok</artifactId>
+               <version>1.16.10</version>
+             </dependency>
+    总结：
+        这一次的项目重构主要是了解ssm的用法以及关于ssm在前后端交互上与之前的有何不同，算是入了个门
+

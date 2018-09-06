@@ -1,0 +1,11 @@
+记录配置过程中遇到的坑
+    -c3p0连接池一直无法加载driverClass
+        -可以肯定是jdbc.properties的问题，所以下一次一定要仔细检查该属性文件！
+    -部署项目启动tomcat时出现c3p0连接池溢出问题，tomcat防止该问题进行了强制关闭出了问题。
+        -在连接池的配置中加入destroy-method="close"的属性解决问题
+    -最后总结测试的时候出现post请求码400
+        -原因是因为cookie中的参数名与后台所拿的参数名不一致
+    -idea中有jquery但是$符号会提醒，虽然不影响程序，但是影响一些自动补全；
+        -在idea的setting里设置下载jquery即可
+    -在数据传输时，dto中的一个boolean值为isExposed成员变量，在前台取的时候却取不到
+        -因为其set方法，返回到前台时自动转成了exposed，所以没取到！

@@ -1,0 +1,244 @@
+总结：
+    -mybatis的配置（普通工程）
+        -核心文件的配置（xml）
+            -引入jdbc的资源文件，拿到数据库的配置项
+                -<properties resource="resource/db.properties"/>
+            -定义数据源（配置事务管理，配置连接池）
+                -<environments default="development">
+                     <environment id="development">
+                         <transactionManager type="JDBC"/>//配置事务管理
+                         <dataSource type="POOLED">//配置连接池
+                             <property name="driver" value="${jdbc.driver}"/>
+                             <property name="url" value="${jdbc.url}"/>
+                             <property name="username" value="${jdbc.username}"/>
+                             <property name="password" value="${jdbc.password}"/>
+                         </dataSource>
+                     </environment>
+                 </environments>
+            -将mapper文件放入核心配置
+                -<mappers>
+                     <package name="com.mybatis.mapper"/>//将该包下所有的mapper文件放入到核心配置中
+                </mappers>
+        -mapper文件配置
+            -mapper文件的作用
+                一个mapper.xml文件对应一个dao层的接口，作为该接口的实现类
+            -mapper文件的配置
+                -<mapper namespace="com.mybatis.mapper.TestMapper">//表示对应哪一个接口
+                     <select id="接口中的方法名" parameterType="sql中的参数名" resultType="返回值的对应的pojo">
+                      //可在核心文件中配置pojo的别名，用类名表示
+                          //-<typeAliases >
+                                 <package name="com.mybatis.generatorPojo"/>
+                          //</typeAliases>
+                         select * from test where id = #{id}//sql语句
+                      </select>
+                 </mapper>
+    -mybatis的操作
+        -操作步骤
+            -拿到mybatis操作工具sqlSession
+                -private  SqlSessionFactory sqlSessionFactory;//定义sqlSession的工厂类
+                 String resource = "resource/mybatis-config.xml";
+                 InputStream inputStream;
+                 {
+                     try {
+                         inputStream = Resources.getResourceAsStream(resource);//读取核心资源配置文件
+                         sqlSessionFactory= new SqlSessionFactoryBuilder().build(inputStream);//拿到sqlSession工厂类
+                     } catch (IOException e) {
+                         e.printStackTrace();
+                     }
+                 }
+                 public SqlSession getSession(){
+                     return sqlSessionFactory.openSession();//拿到sqlSession
+                 }
+            -利用sqlSession进行操作
+                -先拿到mapper对应接口的实例
+                    -TestMapper mapper= session.getMapper(TestMapper.class);
+                -mapper.XXX();//操作接口中的方法
+            -关闭session
+        -数据库中的列名与pojo中属性名不一致
+            -在sql语句中使用as ，as后面的名称对应属性名
+            -使用resultMap
+                -<resultMap type="pojo类名" id="">
+                    <result column="数据库中的列名" property="pojo中对应的属性名" jdbcType="属性名类型(可选)">
+                </resultMap>
+                -接着在select等标签块中使用resultMap="resultMap的id"，而不使用resultType；
+        -传递sql中参数（尽量使用#）
+            -使用#
+                -使用#时，整个参数作为占位符？使用，不根据参数类型需要添加引号（参数为字符串型时）
+            -使用${value}
+                -使用$时，参数作为值使用，需要根据参数类型判断是否需要加引号（参数为字符串型时）
+                -当参数使用表名或别名的时候，使用$
+        -排序
+            -当进行排序时，一定使用列名作为参数，所以需要使用${value}作为sql中的参数表达
+            -中文排序
+                -在sql中使用转换函数convert(列名,using gbk);
+        -多参数传递
+            -sql语句中使用索引0，1...（但不知道为何没有成功）
+            -使用注解@Param
+                -在接口中对参数使用注解@Param(value="sql中的参数名") int param...
+                -sql中的参数名与之对应
+            -使用map
+                -在接口中的参数使用Map
+                -sql中正常传参
+                -在调用方法前先实例化一个map，将sql中参数名称作为key值put到map里面
+        -增删改查
+            -增
+                -在mapper中使用insert块来写语句
+                    -<insert id="insert" parameterType="MybatisPojo" useGeneratedKeys="true" keyProperty="id">
+                         insert into test (name) values (#{name});
+                    </insert>
+                    -其中parameterType表示插入的类型，一般对应一个pojo
+                    -设置useGeneratedKeys="true" keyProperty="id"可以获得刚刚添加记录的id
+                -在mybatis执行增删改操作时，一定要执行commit()操作，因为mybatis的自动提交是关闭的
+            -删
+                -在mapper中使用delete块来写语句
+            -改
+                -在mapper中使用update块来写语句
+                    -修改整个对象时，传递参数为对象类型
+                    -若是修改多个字段但不是全部时，需要先拿出那条数据再修改
+                    -若是修改的字段不多，可使用多参数传递
+    -mybatis动态sql的拼接
+        -if
+            -<if test="进入if的条件">
+                sql中符合该条件的条件句
+            </if>
+        -choose,when,otherwise
+            -<choose>
+                <when test="进入该块的条件">
+                    条件句
+                </when>
+                ...可以有多个when
+                <otherwise>
+                    条件句
+                </otherwise>
+            <choose>
+        -where
+            -当有多个条件使用if选择执行时，可以使用<where></where>来包装<if></if>
+             当跳过第一个if块时，第二个if块中sql语句里面的and会被消除
+        -set
+            -在update时使用set进行条件过滤，更新我需要更新的字段
+        -trim
+            -可以代替掉<where></where>和<set></set>，并过滤掉其中的and和,号；
+            -<trim prefix="where/set" prefixOverrides="and" suffixOverrides=","><trim>
+        -foreach
+            -<foreach collection="list" open="(" close=")" item="id" separator=",">
+                #{id}
+            </foreach>
+            -其中，collection中的类型必须与外层sql快的parameterType一致
+        -sql片段
+            -当有一些重复的sql语句时，可以定义sql片段
+            -<sql id="sql">sql语句的片段</sql>
+             使用时，在sql语句块里使用<include refid="sql"></include>即可在该块中调用sql片段
+    -mybatis逆向工程的创建
+        -导入jar包，包括mybatis，mybatis-generator-core，mysql-connector三个jar包
+        -根据官网的generator-config.xml文件进行配置
+            -需要注意的几点
+                -1、可以配置<commentGenerator><property name="suppressAllComments" value="true"/>
+                    </commentGenerator>,是的自动生成的注释取消掉（看起来很头疼）
+                -2、在jdbcConnection标签里配置数据库连接，可能会出现不识别主键id的情况
+                    这时候配置<property name="useInformationSchema" value="true"/>即可解决
+                -3、注意将生成的pojo，mapper和接口文件放到对应的包里
+                -4、最后配置<table>标签，注意与数据库中的表明对应
+        -根据官网的java生成逆向工程的代码进行修改，运行主函数即可生成逆向工程
+        -整个过程的注意点
+            -主函数只能运行一次，否则会出现mapper中id重复的情况，mybatis会报错
+            -如若出现接口中生成方法数量不全的问题（一般是11个方法），请注意是不是少了基于主键的操作方法
+             注意jdbcConnection是不是配置了useInformationSchema的属性
+        -测试
+            -常规的增删改查与之前一致
+            -update特定属性时使用updateByPrimaryKeySelective()的方法
+            -ByExample
+                -mybatis将一些常用的sql操作封装到每个pojoExample的criteria中，然后调用其中的各种方法
+                -PersonExample personExample=new PersonExample();
+                 PersonExample.Criteria criteria= personExample.createCriteria();
+                 criteria.andNameLike("%a%");//执行一些操作
+    -mybatis的性能
+        -补充，数据库连接池
+            -是数据库连接池是负责分配,管理和释放数据库连接,它允许应用程序重复使用一个现有的数据库连接,而不是重新建立一个。
+            -连接池中的数据库连接的数量是由最小数据库连接数来设定的
+        -一级缓存
+            -session级别的缓存，默认存在
+            -当两次查询执行的是同一条语句时，第二次就会从缓存中拿到数据
+            -但当两次查询之间有增删改的操作，则会flush缓存，第二次查询时会重新获取数据
+        -二级缓存
+            -在跨session范围，默认不开启，不同session范围内的两次查询会两次连接数据库去拿数据
+            -开启方式
+                -在mapper文件中使用<cache/>开启二级缓存
+                -该mapper返回的pojo类实现序列化接口serializable
+            -开启之后两次相同的查询会在缓存区里拿数据
+    -mybatis的关联映射
+        -一对一，多对一（多个blog对应一个author）
+            -在mapper.xml文件中的resultMap配置association属性，关联所对应的主类，其中的主要属性包括
+             property：主类在该类中的成员变量；column：成员变量在表中的字段；javaType：主类类型
+             select：主类查询所有的select的id
+            -在主类的映射文件中配置查询所有的<select>块
+            -一级缓存在关联映射中可以最大限度的减少查询次数
+        -一对多（一个转发对应多个评论）
+            -post的pojo
+                -除了正常的字段映射之外，还需要将评论以list的形式作为成员变量映射，形成一对多的关联关系
+            -post的mapper
+                -在resultMap中增加collection属性，其中主要的属性
+                 property：对应pojo类中的成员变量
+                 column：post表对应comment表的关联字段；post.id->comment.post_id
+                 javaType:查询到的结果以什么java形式返回，一般为ArrayList;
+                 ofType:对应的comment类的类型
+                 select：根据postID查询comment的select语句块；
+        -嵌套结果
+            -当多表联查的时候，需要配置一个新的resultMap来作为结果展示
+                -<resultMap id="blogNestResultMap" type="Blog">
+                     <id column="blog_id" property="id"/>
+                     <result column="blog_title" property="title"/>
+                     <result column="blog_style" property="style"/>
+                     <association property="author" column="blog_author_id" javaType="Author">
+                       <id column="authorID" property="id"/>
+                       <result column="author_age" property="age"/>
+                       <result column="author_contact" property="contact"/>
+                     </association>
+               </resultMap>
+        -扩展结果展示
+            -有时只需某个关联表里的某一字段，无需全部查询
+             将该字段放入作为成员变量放入vo，vo继承这个类的pojo
+        -构造器映射
+            -在pojo中添加含参构造器
+            -在mapper.xml中配置
+                -<resultMap id="blogResultMapConstructor" type="Blog">
+                     <constructor>
+                       <idArg column="id" javaType="_integer"/>
+                       <arg column="title" javaType="string"/>
+                     </constructor>
+                </resultMap>
+            -遇到的问题
+                -int类型其实在mybatis里是一个别名，如果pojo类中数字型用的是int，在使用构造器映射时，
+                 如果要在map中使用javaType=int，那么将构造其中的数字类型改为Integer
+                 或是在map中使用javaType=_integer
+        -鉴别器
+            -当一个表中的字段过多且存在父子类关系时，使用鉴别器discriminator
+            -eg:一张汽车表中存在鉴别字段type用来区分是小轿车还是suv，小轿车和suv各有自己在汽车表中独有的字段
+                -建立汽车pojo，将公共字段作为成员变量
+                -建立小轿车pojo，将独有字段作为成员变量
+                -建立suv pojo，将独有字段作为成员变量
+                -建立汽车类的mapper.xml，在resultMap中配置鉴别器
+                    -<resultMap type="Vehicle" id="vehicleResultMap">
+                        <id column="id" property="id"/>
+                        <discriminator column="type" javaType="int">
+                            <case value="1" resultMap="Car">
+                                <result column="" property="">//配置属性别名
+                            </case>
+                            <case value="2" resultMap="Suv">
+                                <result column="" property="">//配置属性别名
+                            </case>
+                        </discriminator>
+                    </resultMap>
+        -延迟加载
+            -定义
+                -当有表之间有关联关系时，mapper文件中会进行配置，此时调用对应的方法，会执行多个sql，占用资源
+                -延迟加载就是当我需要什么result的我再去加载他
+            -配置
+                -添加cglib和其依赖的asm jar包
+                -在全局配置中配置<setting name="lazyLoadingEnabled" value="true"/>即可开启延迟加载
+            -积极的延迟加载（默认）
+                -不管关联表中的字段我是否需要就全部查询出来，多执行一条sql
+            -不积极的延迟加载（需要配置）（最优配置）
+                -只加载我想要的字段
+                -在全局配置中配置
+                    -<setting name="lazyLoadingEnabled" value="true"/>
+                     <setting name="aggressiveLazyLoading" value="false"/>即可开启不积极的延迟加载

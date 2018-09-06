@@ -1,0 +1,235 @@
+    Hibernate简介(07-01)：
+        -什么是Hibernate？
+            -Hibernate是持久层（数据层）的一种ORM（object relation mapping-对象关系映射）框架；
+            -通过将数据库中的表与类映射，将表中字段与类中的成员变量进行映射，从而达到操作类就能操作数据库；
+            -Hibernate通过自身映射以及hql语言，可以达到不写sql语句的作用
+        -Hibernate的配置
+            -导入jar包
+                -将hibernate官网的jar包下载，将里面的required文件夹下的所有jar包导入到lib下面，将lib与项目进行关联；
+            -生成hibernate.cfg.xml核心配置文件(idea可自动生成下面三项)
+                -在idea中可以通过右击持久层生成持久层映射，选择相应的表,达到自动生成配置文件
+                -自己手写的话，主要是session-factory里的数据库连接属性，如driver，url，username，password等
+            -建立表对应的类，即类似一个javaBean，bean中的成员变量关联表中的字段，生成其getter，setter方法；
+            -生成该类与表映射的文件，文件名称为className.hbm.xml
+                -配置文件中包含<class>对应相应的类，name属性对应类名称，table属性对应表，schema属性对应数据库；
+                -接着是成员属性对应表中字段属性，name属性对应成员名称，column属性对应表中字段（列）;
+                    -成员下面还可以包括generator标签，class属性为native，即表示该成员对应的字段为主键自增；
+                -最后写操作数据接口类，接口实现类，在接口实现类中实现数据逻辑操作
+        -Hibernate的使用
+            -什么是session？
+                -session，数据层的持久化对象，可以理解为数据层的缓冲区，用来进行相应的数据操作
+                -在进行数据操作之前，首先就要获得session，可以将这一方法封装到工具类中
+            -获得session
+                -Configuration cfg=new Configuration();//获得hibernate核心配置
+                -SessionFactory sf=cfg.buildSessionFactory();/实例化SessionFactory对象，读取配置文件中的参数
+                -Session session=sf.openSession();//得到session，可进行相应的数据逻辑操作
+                -Transaction trans=session.beginTransaction();//得到事务
+            -执行增删改查
+                -增
+                    -session.save(表对应的类的实例);
+                -删
+                    -一般基于id删除，需要先拿到该类所代表的Object对象
+                    -Object obj=session.get(类.class,id);
+                    -session.delete(obj);删除
+                -改
+                    -session.update(表对应的类的实例)；
+                -查
+                    -查找单条数据
+                        -直接将删里面的obj返回
+                    -查找多条数据
+                        -Query q=session.createQuery(hql:"from 类名");hql语句，表示从该类里通过映射拿数据
+                        -List list=q.list();//拿到多条数据
+            -提交事务
+                -trans.commit();
+                -trans.rollback();//若有需要，执行事务回滚;
+            -关闭数据库连接
+                -session.close();
+        -初次配置时遇到的问题
+            -url未写完整，需要添加时区，即?serverTimeZone=GMT;
+            -hibernate5.2.Final的jar包与jdk9不兼容的问题，解决如下：
+                -使用低版本的jdk6/7/8进行替换（未使用）
+                -再导入4个jaxb的jar包（使用，不兼容的根源所在）
+    07-03
+        -Hibernate持久化对象的三个状态
+            -瞬时、临时（transient）
+                -在实体类被new的时候，还未写入数据库时；
+            -持久化（persistent）
+                -与session有关的对象，保存在数据库中；
+            -托管（detached）
+                -当session关闭后，仍能对其进行修改，删除；
+        -Hibernate的基础操作对应持久化对象状态的改变
+            -save(),transient-->persistent
+            -get()/load(),persistent-->detached
+            -update(),detached-->persistent
+            -delete(),detached-->transient
+            -临时状态和托管状态的对象最后都会被垃圾回收机制回收掉
+        -Hibernate中的基础增删改
+            -一般查询不推荐使用，太慢，使用hql语句，一般继续使用jdbc，或是其他服务；
+                -但有get()/load()方法，取值操作
+            -删改之前需要先通过get/load取值，再执行操作
+            -自主检测增还是改，saveOrUpdate()方法，通过参数状态来判断是增（transient）还是改（detached）；
+        -遇到的问题
+            -mysql数据库的时区问题
+                -手动将mysql默认的时区设置成本地实去
+                    -set global time_zone='+8:00';
+                -在本地配置中将url后面加上时区设置?serverTimeZone=UTC;
+        -Hibernate组件映射
+            -当表中字段过多时使用组件映射将相似类型的字段映射在同一个类中，形成组件类；
+            -映射方法
+                -将表中相似类型的字段映射在同一个组件类中，生成其getter、setter方法
+                -将所有的组件类在表所对应的大类中实例化，生成组件类以及无法囊括在组件类的剩余字段的getter、setter方法
+            -配置方法（等于对表映射类的配置）
+                -class标签不变，对应整个大类，name对应类名（路径下），table对应数据库中的表
+                -id标签，以及未被囊括到组件类的字段的property标签不变
+                -新建component组件标签，name对应大类中组件类的实例化名称，class表示组件类路径
+                -标签内包括该组件类成员的映射，用property标签表示
+                -将给映射文件配置到hibernate核心配置文件中
+    07-04
+        Hibernate大数据类型的处理
+            -大数据类型的映射
+                -创建数据表，声明好字段的大数据类型，如blob，clob
+                -编写持久化类
+                -编写映射文件
+                    -使用@lob注解来标记大数据类型，生成其getter，setter方法（好处是不用在映射文件中标记字段type属性）
+                    -不使用@lob，而是在映射文件中声明字段的type属性为java.sql.blob/clob..
+            -大数据类型的存取
+                -存
+                    -以io流的方式读取目标文件
+                        InputStream in=new FileInputStream(src);
+                    -创建Blob/Clob类
+                        -Blob/Clob lob=Hibernate.getLobCreator(session).createBlob/Clob(in,in.available());
+                            -available()方法，在读写操作前得知数据流的字节数
+                    -使用get()方法将blob/clob放入持久化类中
+                    -save()方法入库
+                -取
+                    -使用get(object.class,id)得到映射对象
+                    -使用映射对象的get方法得到大数据字段的映射；
+                    -创建缓冲区，将数据写入
+                        byte[] buffer=blob.getBytes(1,(int)blob.length());
+                    -将文件从缓冲区里写出到制定位置
+                        OutputStream out=new FileOutputStream(src);
+                        out.write(buffer);
+                        out.close();
+            -遇到的问题
+                -使用idea自动生成映射文件时，blob类型字段映射成了byte[]，clob类型字段映射成了String
+                    -解决：自己重新编写持久化类和映射文件
+                -图片太大，应将表中字段数据类型更改为mediumblob(16M),blob类型只接受64kb以下
+                    -解决：更改字段类型
+    07-20
+        Hibernate继承映射
+            -表与子类一对一映射（几个子类几张表）
+                -子类继承主类，子表对应子类所有字段（包括继承自主类的字段）；
+                -子类的映射文件正常写
+            -表与类一对一映射（几个类几张表）
+                -主类对应主表，子类对应子表，子表通过外键关联主表，形成主从关系，子类继承主类，形成主从关系；
+                -只写主类的映射文件，将子类的映射文件写进其中
+                    -主类的映射正常写
+                    -<joined-subclass name="子表的实现类" table="子表名称">
+                        <key column="外键名称"/>
+                        <property name="子表字段名称"/>
+                    </joined-subclass>
+            -表与主类一对多关联（几个主类几张表）#最常用#
+                -主类对应一张表，将子类字段写进表中（冗余无所谓），加入分类字段category，用来区分该条记录属于子类；
+                -只写主类的映射文件
+                    -主类映射正常写(注意discriminator和property标签的顺序)
+                    -<discriminator column="分类字段名"/>
+                     <property name="主类字段"/>
+                     <subclass name="子类实例" discriminator-value="分类字段值">
+                        <property name="表中的子类字段名"/>
+                     </subclass>
+            -表的设计
+                -子类继承主类，表中的字段应包含所有字段（包括继承自主类的字段）
+            -遇到的问题：
+                -数据库时区问题！（数据库命令行界面手动设置）
+                    -show variables like '%time_zone%';
+                    -set global time_zone='+8:00';
+                -在表与类一一映射时，在class标签里添加数据库属性schema="test"时报错，去掉即可，原因未知；
+    07-21
+        Hibernate关联映射(可以在对象之间根据关联关系进行导航)
+            -多对一，单向关联（many-to-one）
+                -表的构造
+                    -在主表里添加外键将其与另一张表关联
+                -关联表的实体类和映射文件正常构造
+                -主表实体类的构造
+                    -在实体类中添加另一张表所对应的类的实例，生成其getter，setter方法
+                -实体类映射文件的书写
+                    -其他属性正常构造
+                    -关联属性的构造
+                        -<many-to-one name="关联表在主类中的属性名" class="关联表所对应的实体类">
+                            <column name="关联表中的外键"/>
+                        </many-to-one>
+            -一对多，双向关联(one-to-many)
+                -表与实体类的构造同上
+                -关联表的实体类中添加集合属性，代表主类的集合，并生成其getter，setter方法
+                    -eg:private Set orders=new HashSet();//
+                -关联表的映射文件：
+                    -添加set标签
+                        -<set name="实体类中的集合属性名称">
+                            <key column="外键名称"/>
+                            <one-to-many class="主类全名称"/>
+                        </set>
+        Hibernate中的hql语句
+            -查询
+                -from语句
+                    -from User;//从实体类中获取，不是从表中！
+                -where语句
+                    -from User as u where u.username='tom';
+                -查询单个属性
+                    -select u.username from User as u;
+                -查询多个属性，并将其封装成对象放入list进行遍历
+                    -在实体类中添加包含这两个属性的构造器;
+                    -select new User(u.username,u.password) form User as u;
+                     Query q=session.createQuery(hql);
+                     List list=q.list();
+                     Iterator it=list.iterator();
+                     while(it.hasNext()){
+                        User user=(User)it.next();
+                        String username=user.getUsername();
+                        String password=user.getPassword();
+                        System.out.println(username+password);
+                     }
+                -原生sql关键字用于hql
+                    -count，min，max
+                    -upper，low，distinct(多个重名值返回一个值)
+    07-22
+            -删除与更新（有条件的，批量删除、更新）
+                -创建hql语句，与sql类似
+                    -Query query=session.createQuery(hql);
+                     query.executeUpdate();
+            -排序
+                -升序降序排序
+                    -关键字 order by desc（降序）/asc（升序）
+                        -语句与sql类似
+                            -String hql="select user.username,user.password from User as user order by user.id desc";
+                -分组排序
+                    -关键字group by
+                        -语句与sql类似
+                            -String hql="select count(user),user.age from User as user group by user.age";
+                    -关键字having(在分组结束后添加条件，与where不同)
+                        -语句与sql类似
+                            -String hql="select count(user),user.age from User as user group by user.age having count(user)>3";
+            -占位符（类似于jdbc的preparedStatement语句）
+                -顺序占位符(?)#与jdbc不同，占位符从0开始，jdbc从1开始
+                    -String hql="from User as user where user.name=? and user.password=?";
+                     Query query=session.createQuery(hql);
+                     query.setString(0,"tom");
+                     query.setInteger(1,123456);
+                -引用占位符（:引用名称）
+                    -String hql="from User as user where user.name=:name and user.password=:password";
+                     Query query=session.createQuery(hql);
+                     query.setString(name,"tom");
+                     query.setInteger(password,123456);
+            -配置文件(将hql语句写进mapping映射文件中)
+                -映射文件的配置
+                    -<query name="queryName">
+                        from User as user where user.name=:name and user.password=:password
+                    </query>
+                -调用配置文件
+                    -Query query=session.getNamedQuery("queryName");
+                    -然后正常操作
+            -联合查询（与sql类似，左联left join，右联right join）
+                -两张表之间拥有主外键联系
+                -eg: String hql=""from User as u left join treatment;
+            -子查询
+                -在where条件中添加一条新的语句作为子查询
+                -eg：String hql=""from User as u where (select count(*)from User where u.username='tom')>1;

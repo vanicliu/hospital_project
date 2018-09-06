@@ -1,0 +1,15 @@
+修改文件
+1：采购登记：
+	-main页面里增加模具管理，增加modelManage.aspx页面及对应modelManage.js，modelManage.ashx，addModel.ashx文件；
+2：模具位置生成与调整
+	-fixed.js文件修改,fixRecordRecord.ashx文件修改，fixRecord.aspx文件修改，fixedRecordPrint.js文件修改，headerOperator.js文件修改，新增createModelPosition.ashx,createModelPosition2.ashx
+	 createModelPosition3.ashx,ModelDerease.ashx文件,changePosition.ashx文件；
+3：凭条打印：
+	-新增RecieptPrint.js文件；
+4：位置释放
+	-新增releasePostion.aspx，releaseLog.aspx文件，新增releasePosition.js,releasePosition.ashx,release.ashx文件,releaseLog.js和
+	 showReleaseLog.ashx文件；
+5：表结构的修改
+	-新增headModel，bodyModel，modelRegist，releaseLog三张表，修改treatment表，增加overTime字段
+	-重置fixed表里面的state状态，将state=2的用户的place=null。
+	 update treatment,fixed set fixed.place='' where treatment.Fixed_ID =fixed.ID and treatment.State='2';

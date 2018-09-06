@@ -1,0 +1,230 @@
+Redis总结：
+    -Redis简介
+        -redis是一种非关系型数据库，将数据写入内存并且具有很高的独写效率
+        -目前redis的应用领域也非常的广，常用于做数据缓存。
+    -Jedis
+        -Redis的java操作的api，封装了redis的操作方法来才做
+        -Jedis操作Redis
+            -获取Redis连接
+                -普通连接
+                    -Jedis jedis = new Jedis(host, port);
+                     //host表示Redis地址ip，port表示端口号，默认6379
+                -通过连接池连接
+                    -JedisPoolConfig config = new JedisPoolConfig();//拿到redis的连接池设置
+                     config.setMaxTotal(30);//设置最大连接数
+                     config.setMaxIdle(10);//设置最大空闲连接数
+                     JedisPool jedisPool = new JedisPool(config, host, port);//拿到连接池
+                     Jedis jedis=jedisPool.getResource();//拿到jedis
+        -Jedis的常规操作
+            -操作字符类型数据
+                -jedis.set(key,value);//存放数据
+                -jedis.get(key);//写
+                -jedis.del(key);//删
+            -操作hash类型
+                -常规读取(一条键值对)
+                    -jedis.hset(key,field,value);
+                     //key为该hash类型数据的名字，field为属性名，value为属性值
+                    -jedis.hget(key,field);
+                -操作map(读取多个键值对)
+                    -定义一个HashMap<String,String>，存放键值对//该map必须为<String,String>类型
+                    -jedis.hmset(key,map);//存放数据
+                    -jedis.hmget(key,filed..)//读数据，可读多个键
+                    -jedis.hgetAll(key)//读取所有数据
+                    -jedis.hgetKeys(key)//读取所有键名
+                    -jedis.hgetVal(key)//读取所有键值
+                    -jedis.hexists(key,field)//判断该键是否存在true/false
+            -操作list类型
+                -list分为ArrayList和LinkedList
+                    -一个是线性表，一个是链表
+                    -线性表有索引，读取块
+                    -链表有指针，插入删除快
+                -常规操作
+                    jedis.lpush("myList","1","2","3");//左侧顺序插入list
+                    jedis.rpush("myList","1","2","3");//右侧顺序插入list
+                    System.out.println(jedis.lrange("myList",0,-1));//查询该list，-1表示右边第一个数
+                    System.out.println("lpop:"+jedis.lpop("myList"));//弹出左侧第一个数
+                    System.out.println("rpop:"+jedis.rpop("myList"));//弹出右侧第一个数
+                    System.out.println("llen:"+jedis.llen("myList"));//查询该list的长度
+                    System.out.println("lpushx:"+jedis.lpushx("myList","x"));//在某个已存在的list左侧插入
+                    System.out.println("rpushx:"+jedis.rpushx("Mylist","x"));//在某个已存在的list右侧插入
+                    [2, 1, 3, 2, 1, 1, 2, 3, 1, 2]
+
+                    jedis.lrem("myList",1,"2");//移除从左侧开始数1个值为2的数
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, 1, 3, 1, 1, 2, 3, 1]
+
+                    jedis.lrem("myList",1,"1");//移除从左侧开始数一个值为1的数
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, 3, 1, 1, 2, 3, 1]
+
+                    jedis.lrem("myList",-1,"1");//移除从右侧开始数一个值为1的数
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, 3, 1, 1, 2, 3]
+
+                    jedis.lrem("myList",0,"3");//移除所有值为3的数
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, 1, 1, 2]
+
+                    jedis.lset("myList",1,"y");//将索引为1的值改为y
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, y, 1, 2]
+
+                    jedis.linsert("myList",BinaryClient.LIST_POSITION.BEFORE,"1","z");//在值为1的左侧插入z
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, y, z, 1, 2]
+
+                    jedis.linsert("myList",BinaryClient.LIST_POSITION.AFTER,"2","3");//在值为2的左侧插入3
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [x, y, z, 1, 2, 3]
+
+                    jedis.lpush("myList2","1","2","3");
+                    jedis.rpoplpush("myList2","myList");//拿出myList2的最右侧值插入到myList的最左侧
+                    System.out.println(jedis.lrange("myList",0,-1));
+                    [1, x, y, z, 1, 2, 3]
+        -操作set集合
+            -set集合与list不同，内部无序无索引且不包含重复值
+            -用来跟踪一些不重复的值，计算一些集合之间的关联关系
+            -常见操作
+                -jedis.sadd("mySet","a","b","c","1","2","3");//添加到set集合中
+                 System.out.println(jedis.smembers("mySet"));//显示该集合中所有的数
+                 [1, a, c, b, 3, 2]
+
+                 jedis.srem("mySet","1","a");//删除集合中特定的值
+                 System.out.println(jedis.smembers("mySet"));
+                 [b, 3, 2, c]
+
+                 System.out.println(jedis.sismember("mySet","b"));//判断集合中是否有该数，true
+                 System.out.println(jedis.sismember("mySet","x"));//判断集合中是否有该数，false
+
+                 jedis.sadd("mySet2","b","2","1","c");
+                 System.out.println("差集:"+jedis.sdiff("mySet","mySet2"));
+                 //求两个集合的差集，返回第一个不同的数
+                 差集:[3]
+
+                 /*System.out.println("交集："+jedis.sinter("mySet","mySet2"));
+                 //求两个集合的交集
+                 交集：[2, b, c]
+
+                 System.out.println("并集："+jedis.sunion("mySet","mySet2"));
+                 //求两个集合的并集
+                 并集：[b, 3, 2, 1, c]
+
+                 System.out.println("得到差集并放入新集合中："+jedis.sdiffstore("mySet3","mySet","mySet2"));
+                 //得到差集并放入新集合中：1
+                 jedis.sinterstore("mySet4","mySet","mySet2");
+                 System.out.println("得到交集并放入新集合中："+jedis.smembers("mySet4"));
+                 //得到交集并放入新集合中：[b, 2, c]
+
+                 jedis.sunionstore("mySet5","mySet","mySet2");
+                 System.out.println("得到并集并放入新集合中："+jedis.smembers("mySet5"));
+                 //得到并集并放入新集合中：[b, 3, 2, 1, c]
+        -操作Sorted-Set
+            -与set相比，集合每一个值都有一个分数与之对应，从而可以进行排序
+            -每一个成员都是有序的
+            -常用于一些游戏，热点话题的排名
+            -常规操作
+                -jedis.zadd("mySort",40,"zk");
+                 Map<String,Double> map=new HashMap<>();
+                 map.put("lc",100D);
+                 map.put("yhs",90D);
+                 map.put("pzk",80D);
+                 jedis.zadd("mySort",map);
+                 //插入成员和分数到集合中[zk, pzk, yhs, lc]
+
+                 /*System.out.println(jedis.zrange("mySort",0,-1));
+                 //查询所有的成员[zk, pzk, yhs, lc]
+
+                 System.out.println("查询某个成员的分数："+jedis.zscore("mySort","lc"));
+                 //查询某个成员的分数：100.0
+
+                 System.out.println("移除："+jedis.zrem("mySort","pzk","lc")+"个成员");
+                 //移除：2个成员
+
+                 System.out.println("还剩："+jedis.zcard("mySort")+"个成员");
+                 //还剩：2个成员
+
+                 Set<Tuple> set= jedis.zrangeWithScores("mySort",0,-1);
+                 for(Tuple tuple:set){
+                     System.out.println(tuple.getElement()+":"+tuple.getScore());
+                 }//遍历返回的集合，得到每一个成员及其对应的分数 zk:40.0 yhs:90.0
+
+                 System.out.println("按照范围来删除："+jedis.zremrangeByRank("mySort",0,2));
+                 //按照范围来删除：2
+
+                 jedis.zadd("mySort",40,"zk");
+                 Map<String,Double> map=new HashMap<>();
+                 map.put("lc",100D);
+                 map.put("yhs",90D);
+                 map.put("pzk",80D);
+                 jedis.zadd("mySort",map);
+                 System.out.println("删除80-90之间的成员："+jedis.zremrangeByScore("mySort",80d,90d));
+                 //删除80-90之间的成员：2
+
+                 System.out.println("显示50-100分之间的成员："+jedis.zrangeByScore("mySort",50d,100d));
+                 //显示50-100分之间的成员：[lc]
+
+                 jedis.zincrby("mySort",20d,"lc");
+                 System.out.println("增加并显示某个成员的分数："+jedis.zscore("mySort","lc"));
+                 //增加并显示某个成员的分数：120.0
+
+                 Map<String,Double> map=new HashMap<>();
+                 map.put("yhs",90D);
+                 map.put("pzk",80D);
+                 jedis.zadd("mySort",map);
+                 System.out.println("计算某个分数段之间成员的个数："+jedis.zcount("mySort",80d,100d));
+                 //计算某个分数段之间成员的个数：2
+        -keys的一些通用操作
+            -System.out.println("查询所有的keys："+jedis.keys("*"));
+             查询所有的keys：[myHash, myList, name, num1, mySort, myList2,
+                             mySet2, mySet3, mySet4, myHash2, mySet, mySet5]
+
+             System.out.println("查询所有以my开头的keys "+jedis.keys("my*"));
+             查询所有以my开头的keys [myHash, myList, mySort, myList2, mySet2,
+                                     mySet3, mySet4, myHash2, mySet, mySet5]
+
+             System.out.println("删除特定的keys:"+jedis.del("name","num"));
+             删除特定的keys:1
+
+             System.out.println("判断值为？的keys是否存在:"+jedis.exists("myList"));
+             判断值为？的keys是否存在:true
+
+             System.out.println("判断值为？的keys是否存在:"+jedis.exists("myList","mySort"));
+             判断值为？的keys是否存在:2  单个为bool值，多个为符合条件的数量
+
+             jedis.rename("num1","myNum");
+             System.out.println("修改key名后取旧值："+jedis.get("num1")+
+                                 " 修改key名后取新值："+jedis.get("myNum"));
+             修改key名后取旧值：null    修改key名后取新值：250
+
+             jedis.expire("myNum",100);//设置该key多少时间后失效
+             System.out.println("剩余多少："+jedis.ttl("myNum")+" 秒");
+             剩余多少：26 秒
+
+             System.out.println("判断该key的类型为："+jedis.type("mySort"));
+             判断该key的类型为：zset
+    -redis中的多数据库与事务
+        -多数据库
+            -redis默认使用的是0号数据库,其一共有15个数据库
+            -切换数据库
+                -jedis.select(1)//选择1号数据库
+            -将一个数据库中的值传到另一个数据库
+                -jedis.move("mySort",1);
+        -事务
+            -开启事务
+                -Transaction transaction=jedis.multi();
+            -提交
+                -transaction.exec();
+            -回滚
+                -transaction.discard();
+    -redis的持久化
+        -概念
+            -redis的持久化指的是将内存中的数据同步到硬盘的过程
+        -方式
+            -RDB与AOF
+            -RDB
+                -redis默认的持久化方式，持久化效率高
+                -在redis.config的配置文件中可以配置，当多少秒内有多少数据法神变化时就会自动备份。
+                -也有缺点，比如备份到一般宕机，那么日志数据就会丢失。
+            -AOF
+                -可配置的持久化方式，每有数据发生变化就会进行持久化备份，于是效率较低
+                -对于日志采用的是追加append的方式，即使发生宕机，可通过工具一致化，也不会有数据丢失的问题

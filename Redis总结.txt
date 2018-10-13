@@ -1,4 +1,4 @@
-Redis总结：
+﻿Redis总结：
     -Redis简介
         -redis是一种非关系型数据库，将数据写入内存并且具有很高的独写效率
         -目前redis的应用领域也非常的广，常用于做数据缓存。
@@ -16,7 +16,7 @@ Redis总结：
                      JedisPool jedisPool = new JedisPool(config, host, port);//拿到连接池
                      Jedis jedis=jedisPool.getResource();//拿到jedis
         -Jedis的常规操作
-            -操作字符类型数据
+            -操作字符类型数据（String）
                 -jedis.set(key,value);//存放数据
                 -jedis.get(key);//写
                 -jedis.del(key);//删
@@ -223,7 +223,7 @@ Redis总结：
             -RDB与AOF
             -RDB
                 -redis默认的持久化方式，持久化效率高
-                -在redis.config的配置文件中可以配置，当多少秒内有多少数据法神变化时就会自动备份。
+                -在redis.config的配置文件中可以配置，当多少秒内有多少数据发生变化时就会自动备份。
                 -也有缺点，比如备份到一般宕机，那么日志数据就会丢失。
             -AOF
                 -可配置的持久化方式，每有数据发生变化就会进行持久化备份，于是效率较低
